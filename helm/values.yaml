@@ -1,0 +1,129 @@
+# Default values for sandbox-app.
+#
+# image.tag is rewritten by CI at package time so the published chart version
+# and its image are one artifact. Nothing downstream sets image.tag: a
+# deployment pins the CHART version and gets a coherent chart+image.
+
+fullnameOverride: sandbox-app
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/kanzalqalandri/sandbox-app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+container:
+  imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  path: /
+  extra_paths: []
+  hostname: sandbox.example.com
+  tlsSecretName: ""
+
+readinessProbe:
+  httpGet:
+    path: /health-check
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+livenessProbe:
+  httpGet:
+    path: /health-check
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+deployment:
+  annotations: {}
+  template:
+    labels: {}
+
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Where this component sits. Rendered into platform-config/values.yaml by the CD
+# pipeline from instance.yaml + clusters.yaml, and surfaced by the app at /version
+# so a deploy can be confirmed from outside the cluster.
+placement:
+  stack: ""
+  instance: ""
+  cluster: ""
+  environment: ""
+
+# In-cluster address of this instance's API component. Points at the sibling
+# Service by default, so app and api are wired together without either knowing
+# the tenant's hostname.
+apiUrl: http://sandbox-api:5000/api
+
+envVars:
+  - name: "APP_VERSION"
+    value: "{{ .Chart.Version }}"
+  - name: "API_URL"
+    value: "{{ .Values.apiUrl }}"
+  - name: "STACK"
+    value: "{{ .Values.placement.stack }}"
+  - name: "INSTANCE"
+    value: "{{ .Values.placement.instance }}"
+  - name: "CLUSTER"
+    value: "{{ .Values.placement.cluster }}"
+  - name: "ENVIRONMENT"
+    value: "{{ .Values.placement.environment }}"
+
+# Test hooks for the CD health gate. Setting failReadiness on ONE component of an
+# instance is how you check that a rollback can be scoped to that component while
+# its siblings stay where they are.
+failReadiness: false
+startupDelayMs: 0
+
+# --- secrets ------------------------------------------------------------------
+# Pulled from OpenBao by External Secrets Operator at runtime. This chart never
+# renders a Secret from values, so no secret material can reach git even by
+# accident. The platform supplies exactly one thing: `path`.
+externalSecret:
+  enabled: false
+  secretStoreName: openbao
+  secretStoreKind: ClusterSecretStore
+  refreshInterval: 1h
+  path: ""              # e.g. secret/tenants/dev/us-dev-01/acme/sandbox-app
+  keys:
+    - DEMO_SESSION_SECRET
+
+resources:
+  limits:
+    memory: "128Mi"
+    cpu: "200m"
+  requests:
+    memory: "64Mi"
+    cpu: "10m"
+
+nodeSelector: {}
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - sandbox-app
+          topologyKey: kubernetes.io/hostname
