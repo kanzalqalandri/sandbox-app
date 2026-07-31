@@ -1,11 +1,13 @@
 {
   "name": "sandbox-app",
-  "version": "0.0.0",
+  "version": "1.0.3",
   "private": true,
   "description": "Stand-in front-end component for Apporto Platform v2 sandbox",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }
