@@ -88,6 +88,11 @@ envVars:
   - name: "ENVIRONMENT"
     value: "{{ .Values.placement.environment }}"
 
+# Per-tenant environment, written by the platform from release.yaml. Never
+# secrets: those come from OpenBao via ESO, and the CD preflight blocks anything
+# secret-shaped from reaching a rendered values file.
+extraEnv: {}
+
 # Test hooks for the CD health gate. Setting failReadiness on ONE component of an
 # instance is how you check that a rollback can be scoped to that component while
 # its siblings stay where they are.
