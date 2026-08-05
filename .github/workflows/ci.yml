@@ -151,7 +151,7 @@ jobs:
             echo "::error::repository variable DEV_CLUSTER is not set."
             exit 1
           fi
-          gh workflow run tenant-component-version.yml -R kanzalqalandri/platform-workflows \
+          gh workflow run tenant-component-version.yml -R kanzalqalandri/platform-workflows --ref main \
             -f instance="${{ steps.dev.outputs.tenant }}" \
             -f cluster="${{ vars.DEV_CLUSTER }}" \
             -f component="${COMPONENT}" \
